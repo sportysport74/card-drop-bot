@@ -10,6 +10,17 @@ Watches card pages for you. When something goes live it:
 
 Setup takes about 20 minutes. Do Steps 1-6 in order.
 
+## What's new
+
+**Version 1.1.0**
+- **Faster at drop time:** set a **Drop time** on a watch and it checks every 10-15 s from 2 min
+  before, and every 3-5 s right around the drop. It backs off by itself if the store pushes back.
+- **5-minute warning** (was 2) so you're in the Topps waiting room before the start.
+- **Raffle button** for Topps EQL / raffle drops: alert only, no auto-cart, no speed-up.
+
+**Which version do I have?** Go to `chrome://extensions` and look at the number on the
+Card Drop Watcher box. Older than 1.1.0? See **Getting updates later** in Step 1.
+
 ---
 
 ## STEP 1 - Install the extension (5 min, once per PC)
