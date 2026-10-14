@@ -158,9 +158,19 @@ the buttons. So you save your card **once on each store**, in this same Chrome.
 2. Click the red extension icon. The name and URL fill in by themselves.
 3. **Check the Name.** Keep it short and exact, like `Topps Chrome Sapphire Basketball`.
    Full Auto-Buy only buys if every word of this name is on the checkout page.
-4. If you know the drop date and time, fill in **Drop time**.
+4. If you know the drop date and time, fill in **Drop time**. **Always do this when you know it.**
+   Around the drop time the bot checks much faster (see "What happens on drop day").
 5. Click **Watch product page**.
 6. In the list, click **Auto-cart: off** so it turns green and says **ON**.
+
+**Is it a raffle? (Topps EQL drops)**
+Some hyped Topps drops (Sapphire, Bowman Chrome, Inception...) are a **raffle (EQL)**, not first-come
+first-served. The product page or Topps' announcement will say "raffle", "EQL" or "enter for a chance".
+For those, click **Raffle: off** in the list so it says **ON**. Then the bot:
+- only alerts you (siren + phone) when entry opens: **no auto-cart**,
+- does **not** speed up at drop time. Speed doesn't help in a raffle, and bot-like activity can
+  get your entry thrown out,
+- reminds you 5 minutes before so you can enter by hand.
 
 **A search or "new arrivals" page (catches products before they have a page):**
 1. Go to the store's search results or new-releases page.
@@ -216,7 +226,7 @@ See Troubleshooting.
 
 - Keep **Chrome open** (it can be minimized). Your PC must be **on and not asleep**
   (Windows Settings > System > Power > Sleep: **Never** while plugged in).
-- It checks each page every 45-90 seconds on its own.
+- It checks each page every 45-90 seconds on its own, and much faster around a drop time you set.
 
 | Status in the popup | Meaning |
 |---|---|
@@ -233,9 +243,21 @@ See Troubleshooting.
 
 1. **10 min before** a drop time you set: it checks you're signed in on that store.
    If not, you get a loud alert and the sign-in page opens. **Sign in right away.**
-2. **2 min before**: siren, phone push, and the page opens. Be at your computer if you can.
-   On Topps waiting-room drops, **join the line before the start time and don't refresh.**
-3. **When it goes live** (Auto-cart ON): it adds 1 to your cart and goes through checkout. Then:
+2. **5 min before**: siren, phone push, and the page opens. Be at your computer if you can.
+   On Topps waiting-room drops, **join the line now, before the start time, and don't refresh.**
+   Everyone who's in line before the start gets shuffled fairly. Showing up late puts you at the back.
+3. **It speeds up** (not for Raffle watches):
+
+   | Time | How often it checks | Popup shows |
+   |---|---|---|
+   | Until 2 min before | every 45-90 s (normal) | `Drops in ...` |
+   | 2 min to 15 s before | every 10-15 s | `WARM` |
+   | 15 s before to 60 s after | every 3-5 s | `STRIKE` |
+   | After that, or once it's in stock | back to normal | |
+
+   If the store says **"too many requests"** or shows a **bot check**, it backs off right away,
+   even mid-drop. Hammering would only get you blocked at the worst moment.
+4. **When it goes live** (Auto-cart ON): it adds 1 to your cart and goes through checkout. Then:
 
 | Alert you get | What to do |
 |---|---|
@@ -255,7 +277,8 @@ See Troubleshooting.
 | **Check now** | Checks that page immediately. |
 | **Pause / Resume** | Stops or restarts that one watch. |
 | **Mode: fetch / tab** | Fetch is light, in the background. Tab reloads a pinned tab for pages that need it. Switches by itself. |
-| **Auto-cart** | ON = carts and goes through checkout when it goes live. |
+| **Raffle** | ON = Topps EQL / raffle drop. Alert only: no auto-cart, no speed-up at drop time. |
+| **Auto-cart** | ON = carts and goes through checkout when it goes live. Hidden while Raffle is ON. |
 | **Check sign-in** | Checks right now that you're signed in on that store. |
 | **Remove** | Stops watching that page. |
 | **Pause all** (top) | Stops everything, for example overnight. |
@@ -287,6 +310,7 @@ open page in front on/off, use Shop Pay on/off, Full Auto-Buy on/off, max price.
 
 - Your card info stays with each store. The extension never sees it.
 - It never clicks the final buy button unless Full Auto-Buy is on and every check passes.
+- On raffle (EQL) drops, mark the watch **Raffle**. The bot just tells you when to enter.
 - It doesn't get around CAPTCHAs, waiting rooms, verification codes or "1 per customer" limits.
   When it hits one, it hands control to you.
 - PayPal, Apple Pay and Google Pay can't be used by the bot. Use a card saved in the store account.
