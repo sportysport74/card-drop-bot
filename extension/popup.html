@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Card Drop Watcher</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Card Drop Watcher</h1>
+    <button id="pause-all" class="ghost"></button>
+  </header>
+
+  <section class="card">
+    <h2>Watch a page</h2>
+    <label>Name <input id="label" placeholder="e.g. Chrome Sapphire Basketball"></label>
+    <label>URL <input id="url" placeholder="https://..."></label>
+    <label>Drop time (optional) <input id="drop-time" type="datetime-local"></label>
+    <div class="row">
+      <button id="add-product" title="A single product page. Alerts when it goes in stock.">Watch product page</button>
+      <button id="add-search" class="secondary" title="A search, category or new-arrivals page. Alerts when any of your 7 products gets listed.">Watch for new listings</button>
+    </div>
+    <p id="flash" class="flash"></p>
+  </section>
+
+  <section>
+    <h2>Watching <span id="count" class="muted"></span></h2>
+    <ul id="watches"></ul>
+    <p id="empty" class="muted">Nothing yet. Open a product page on Topps, Fanatics, etc. and click "Watch product page".</p>
+  </section>
+
+  <details class="card">
+    <summary>Settings &amp; phone alerts</summary>
+    <label>ntfy topic <input id="ntfy-topic"></label>
+    <p class="muted small">Install the free <b>ntfy</b> app on your phone, tap +, and subscribe to this exact topic.</p>
+    <label>ntfy server <input id="ntfy-server"></label>
+    <div class="row">
+      <label>Check every (min sec) <input id="min-sec" type="number" min="30"></label>
+      <label>to (max sec) <input id="max-sec" type="number" min="40"></label>
+    </div>
+    <label class="check"><input id="sound" type="checkbox"> Play siren on this PC</label>
+    <label class="check"><input id="open-tab" type="checkbox"> Open the page in front when it goes live</label>
+    <label class="check"><input id="express" type="checkbox"> Auto-cart: use Shop Pay when the cart offers it</label>
+    <div class="buy">
+      <label class="check"><input id="auto-buy" type="checkbox"> Full Auto-Buy (automatically clicks Pay Now / Place Order)</label>
+      <label>Don't buy if the total is over ($) <input id="max-price" type="number" min="1" step="1" placeholder="e.g. 300"></label>
+      <p class="muted small">Only for watches with Auto-cart ON. Before clicking it checks that the total is under this limit, the quantity is 1, and every word of the watch's name is in the order summary. If any check fails it stops and you click. Each watch buys once, then turns its Auto-cart off.</p>
+    </div>
+    <div class="row">
+      <button id="save">Save</button>
+      <button id="test" class="secondary">Send test alert</button>
+    </div>
+    <p id="settings-flash" class="flash"></p>
+  </details>
+
+  <script src="presets.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
