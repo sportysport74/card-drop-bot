@@ -14,24 +14,71 @@ Setup takes about 20 minutes. Do Steps 1-6 in order.
 
 ## STEP 1 - Install the extension (5 min, once per PC)
 
-**Get the files onto the PC** (pick one):
-- **Easiest:** on the GitHub page for this repo, click the green **Code** button > **Download ZIP**.
-  Right-click the ZIP > **Extract All**, and put the folder somewhere it will stay
-  (e.g. `Documents\card-drop-bot`). Don't delete it later: Chrome runs the extension from it.
-- **With Git:** `git clone <this repo's URL>`. To update later: `git pull`, then reload (step 7).
+You do **not** need a GitHub account, Git, or any coding. You just download a ZIP file.
 
-**Load it into Chrome:**
-1. Open **Chrome** (Edge works too).
-2. In the address bar type `chrome://extensions` and press Enter.
-3. Top right: turn **Developer mode** ON.
-4. Top left: click **Load unpacked**.
-5. Pick the **`extension`** folder inside `card-drop-bot`, then click **Select Folder**.
-6. Click the puzzle-piece icon at the top right of Chrome, then the **pin** next to
-   **Card Drop Watcher**, so its red icon is always visible.
-7. After any update to the files: click the reload arrow on Card Drop Watcher in `chrome://extensions`.
+### 1A. Download it
 
-Each PC gets its own phone-alert topic. Subscribe to each PC's topic in the ntfy app (Step 2),
-and do Step 3 (sign in to stores) in Chrome on each PC.
+1. On the PC, open Chrome and go to this link:
+   **https://github.com/sportysport74/card-drop-bot/archive/refs/heads/main.zip**
+2. A file called **`card-drop-bot-main.zip`** downloads. (No download? Click the down-arrow
+   icon at the top right of Chrome and check it there.)
+
+   *Other way to get the same file:* go to https://github.com/sportysport74/card-drop-bot,
+   click the green **`<> Code`** button, then **Download ZIP**.
+
+### 1B. Unzip it and put it somewhere safe
+
+1. Open **File Explorer** (the yellow folder icon on the taskbar) and click **Downloads** on the left.
+2. **Right-click** `card-drop-bot-main.zip` > **Extract All...** > **Extract**.
+   (Don't just double-click the ZIP and use it from there. That won't work. It must be extracted.)
+3. A new folder called **`card-drop-bot-main`** opens. Drag that folder into **Documents**
+   (on the left side of File Explorer).
+4. **Never delete or move this folder.** Chrome runs the bot from it. If it's gone, the bot is gone.
+
+> ⚠️ **Folder-inside-a-folder trap:** Windows often makes `card-drop-bot-main` **inside another**
+> `card-drop-bot-main`. That's normal. Just keep opening folders until you see one called
+> **`extension`** next to a file called **`README.md`**. The `extension` folder is the one you want.
+
+### 1C. Put it in Chrome
+
+1. Click Chrome's address bar (where you type websites), type **`chrome://extensions`**, press **Enter**.
+2. Top right corner: flip the **Developer mode** switch **ON** (it turns blue).
+   Three new buttons appear on the top left.
+3. Click **Load unpacked** (top left).
+4. A folder picker opens. Go to **Documents** > **card-drop-bot-main** (> **card-drop-bot-main**
+   again if it's there) > click **once** on the **`extension`** folder so it's highlighted.
+5. Click **Select Folder**.
+6. A box called **Card Drop Watcher** now shows on the page. ✅ Installed.
+
+**Got an error instead?**
+- *"Manifest file is missing or unreadable"*: you picked the wrong folder. Click **Load unpacked**
+  again and pick the folder named exactly **`extension`** (the one that has `manifest.json` inside it).
+- *A red **Errors** button on the box*: you can ignore it if the extension still works. If it doesn't,
+  click the **reload arrow** (↻) on the box.
+- *No **Load unpacked** button*: Developer mode isn't on. Flip the switch top right.
+
+### 1D. Pin the icon so you can see it
+
+1. At the top right of Chrome, click the **puzzle-piece** icon 🧩.
+2. Next to **Card Drop Watcher**, click the **pin** 📌.
+3. A **red icon** now sits next to the address bar. That's the bot. Click it any time to open it.
+
+### Getting updates later
+
+When there's a new version:
+1. Delete the old `card-drop-bot-main` folder in Documents.
+2. Do **1A** and **1B** again (download the ZIP, extract, put it in Documents in the same place).
+3. Go to `chrome://extensions` and click the **reload arrow** (↻) on Card Drop Watcher.
+
+Your watches and settings are kept, as long as you **don't click "Remove"** on the extension.
+
+*(If you know Git: `git clone https://github.com/sportysport74/card-drop-bot.git`, then
+`git pull` to update and click the reload arrow.)*
+
+### More than one PC?
+
+Do Step 1 on each PC. Each PC gets its own phone-alert topic, so subscribe to each PC's topic
+in the ntfy app (Step 2), and do Step 3 (sign in to stores) in Chrome on each PC.
 
 **Run it on only one PC per store if Full Auto-Buy is on.** Each PC has its own
 "bought once" lock, so two PCs watching the same product could each buy one.
