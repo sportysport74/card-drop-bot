@@ -14,15 +14,34 @@ Setup takes about 20 minutes. Do Steps 1-6 in order.
 
 ## STEP 1 - Install the extension (5 min, once per PC)
 
+**Get the files onto the PC** (pick one):
+- **Easiest:** on the GitHub page for this repo, click the green **Code** button > **Download ZIP**.
+  Right-click the ZIP > **Extract All**, and put the folder somewhere it will stay
+  (e.g. `Documents\card-drop-bot`). Don't delete it later: Chrome runs the extension from it.
+- **With Git:** `git clone <this repo's URL>`. To update later: `git pull`, then reload (step 7).
+
+**Load it into Chrome:**
 1. Open **Chrome** (Edge works too).
 2. In the address bar type `chrome://extensions` and press Enter.
 3. Top right: turn **Developer mode** ON.
 4. Top left: click **Load unpacked**.
-5. Pick this folder: `C:\Users\YourName\card-drop-bot\extension`, then click **Select Folder**.
+5. Pick the **`extension`** folder inside `card-drop-bot`, then click **Select Folder**.
 6. Click the puzzle-piece icon at the top right of Chrome, then the **pin** next to
    **Card Drop Watcher**, so its red icon is always visible.
+7. After any update to the files: click the reload arrow on Card Drop Watcher in `chrome://extensions`.
 
-On another PC: copy the `extension` folder over (USB stick, Google Drive, etc.) and repeat 1-6.
+Each PC gets its own phone-alert topic. Subscribe to each PC's topic in the ntfy app (Step 2),
+and do Step 3 (sign in to stores) in Chrome on each PC.
+
+**Run it on only one PC per store if Full Auto-Buy is on.** Each PC has its own
+"bought once" lock, so two PCs watching the same product could each buy one.
+
+## Phone
+
+The extension can't run on a phone: Chrome on Android and iPhone doesn't support extensions.
+Your phone's job is getting the alerts (Step 2). When one comes in, tap it to open the page
+on your phone and buy there if you're away from the PC. You'll need to be signed in to the
+store in your phone's browser too.
 
 ---
 
