@@ -16,12 +16,26 @@ const DEFAULT_SETTINGS = {
   maxPrice: 0,
   paused: false,
 };
-const HOST_GAP_MS = 10000; // never hit the same store twice within 10s
+const HOST_GAP_MS = 10000; // never hit the same store twice within 10s (outside a drop window)
 const MAX_BACKOFF = 16;    // failures back off up to 16x the normal interval
 const BAD = ['blocked', 'ratelimited', 'error'];
 
+// Drop-time speed-up for a watch with a drop time (not raffles):
+// normal 45-90s -> warm (from 2 min before) every 10-15s
+// -> strike (15s before to 60s after) every 3-5s -> normal again.
+// "Too many requests" or a bot check at any point drops straight back to normal backoff.
+const WARM_MS = 2 * 60000;
+const STRIKE_BEFORE_MS = 15000;
+const STRIKE_AFTER_MS = 60000;
+const PHASE = {
+  warm: { sec: [10, 15], hostGap: 8000 },
+  strike: { sec: [3, 5], hostGap: 2500 },
+};
+const ALARM_MIN_MS = 30000; // Chrome won't fire alarms sooner than this, so short waits use a timer too
+
 const hostLast = new Map();
 const running = new Set();
+const timers = new Map();
 const rand = (a, b) => a + Math.random() * (b - a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const hostOf = (url) => new URL(url).hostname.replace(/^www\./, '');
@@ -68,29 +82,65 @@ async function rescheduleAll() {
   await updateBadge(watches);
 }
 
+function dropPhase(w, now = Date.now()) {
+  if (!w.dropTime || w.raffle || w.kind === 'search' || w.stock === 'in') return 'normal';
+  const t = now - w.dropTime;
+  if (t >= -STRIKE_BEFORE_MS && t <= STRIKE_AFTER_MS) return 'strike';
+  if (t >= -WARM_MS && t < -STRIKE_BEFORE_MS) return 'warm';
+  return 'normal';
+}
+
 function nextDelayMs(w, settings) {
+  const phase = dropPhase(w);
+  const pushedBack = w.status === 'ratelimited' || w.status === 'blocked';
+  if (phase !== 'normal' && !pushedBack) {
+    const [a, b] = PHASE[phase].sec;
+    let ms = rand(a, b) * 1000 * 2 ** Math.min(w.failures || 0, 3); // timeouts/errors ease off a little
+    // Don't let a warm-mode wait run past the start of strike mode.
+    if (phase === 'warm') ms = Math.min(ms, Math.max(500, w.dropTime - STRIKE_BEFORE_MS - Date.now() + rand(0, 500)));
+    return ms;
+  }
   let mult = 2 ** Math.min(w.failures || 0, Math.log2(MAX_BACKOFF));
   if (w.status === 'ratelimited') mult = Math.max(mult, 8);
   return rand(settings.minSec, settings.maxSec) * 1000 * mult;
 }
 
+// Schedules the next check. Alarms survive the worker being shut down, but can't fire
+// sooner than 30s, so short waits also get a timer (each check touches storage, which
+// keeps the worker awake between them).
+function scheduleCheck(id, when) {
+  chrome.alarms.create('w:' + id, { when });
+  clearTimeout(timers.get(id));
+  timers.delete(id);
+  const ms = when - Date.now();
+  if (ms < ALARM_MIN_MS) timers.set(id, setTimeout(() => { timers.delete(id); runCheck(id); }, Math.max(0, ms)));
+}
+
+function cancelCheck(id) {
+  chrome.alarms.clear('w:' + id);
+  clearTimeout(timers.get(id));
+  timers.delete(id);
+}
+
 function scheduleDrop(w) {
-  chrome.alarms.clear('d10:' + w.id);
-  chrome.alarms.clear('d2:' + w.id);
+  for (const p of ['d10:', 'd5:', 'd2:', 'r:']) chrome.alarms.clear(p + w.id);
   if (!w.dropTime) return;
-  for (const min of [10, 2]) {
+  for (const min of [10, 5]) {
     const when = w.dropTime - min * 60000;
     if (when > Date.now()) chrome.alarms.create(`d${min}:${w.id}`, { when });
   }
+  // Wake up for warm mode even if the normal wait (or a backoff) would sleep through it.
+  const ramp = w.dropTime - WARM_MS;
+  if (!w.raffle && w.kind !== 'search' && ramp > Date.now()) chrome.alarms.create('r:' + w.id, { when: ramp });
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   const i = alarm.name.indexOf(':');
   const kind = alarm.name.slice(0, i);
   const id = alarm.name.slice(i + 1);
-  if (kind === 'w') runCheck(id);
+  if (kind === 'w' || kind === 'r') runCheck(id);
   else if (kind === 'd10') dropReminder(id, 10);
-  else if (kind === 'd2') dropReminder(id, 2);
+  else if (kind === 'd5' || kind === 'd2') dropReminder(id, 5);
 });
 
 // ---------- checking
@@ -104,9 +154,11 @@ async function runCheck(id, force = false) {
     if (!w || (!force && (settings.paused || w.paused))) return;
 
     const host = hostOf(w.url);
+    const phase = dropPhase(w);
+    const hostGap = phase === 'normal' ? HOST_GAP_MS : PHASE[phase].hostGap;
     const gap = Date.now() - (hostLast.get(host) || 0);
-    if (gap < HOST_GAP_MS) {
-      chrome.alarms.create('w:' + id, { when: Date.now() + HOST_GAP_MS - gap + rand(2000, 8000) });
+    if (gap < hostGap) {
+      scheduleCheck(id, Date.now() + hostGap - gap + (phase === 'normal' ? rand(2000, 8000) : rand(100, 400)));
       return;
     }
     hostLast.set(host, Date.now());
@@ -125,7 +177,7 @@ async function runCheck(id, force = false) {
       if (!s.settings.paused && !cur.paused) {
         const delay = nextDelayMs(cur, s.settings);
         cur.nextCheck = Date.now() + delay;
-        chrome.alarms.create('w:' + id, { when: cur.nextCheck });
+        scheduleCheck(id, cur.nextCheck);
       }
       return out;
     });
@@ -270,7 +322,9 @@ function applyResult(w, r) {
     }
   } else if (r.status === 'in' || r.status === 'out') {
     if (r.status === 'in' && w.stock !== 'in') {
-      alerts.push({ title: `IN STOCK: ${w.label}`, message: `${hostOf(w.url)} - ${r.reason}. GO!`, url: w.url, autoCart: !!w.autoCart, watchId: w.id, variantId: w.shopify ? w.variantId : null });
+      alerts.push(w.raffle
+        ? { title: `RAFFLE OPEN: ${w.label}`, message: `${hostOf(w.url)} - go enter the raffle now. The bot won't cart raffle drops.`, url: w.url }
+        : { title: `IN STOCK: ${w.label}`, message: `${hostOf(w.url)} - ${r.reason}. GO!`, url: w.url, autoCart: !!w.autoCart, watchId: w.id, variantId: w.shopify ? w.variantId : null });
     }
     w.stock = r.status;
   }
@@ -585,12 +639,15 @@ async function dropReminder(id, min) {
   const w = watches.find((x) => x.id === id);
   if (!w) return;
   if (min === 10) await sessionCheck(w, settings, false);
+  const soon = min === 5;
   await fireAlert({
-    title: `${w.label} drops in ${min} min`,
-    message: min === 2 ? 'Get in the waiting room / on the page NOW.' : 'Get to your computer, log in, check your saved card.',
+    title: `${w.label} ${w.raffle && soon ? 'raffle opens' : 'drops'} in ${min} min`,
+    message: !soon ? 'Get to your computer, log in, check your saved card.'
+      : w.raffle ? 'Raffle / EQL drop: get on the page and be ready to enter. Speed does not matter here.'
+      : "Get in the waiting room / on the page NOW. Once you're in line, don't refresh.",
     url: w.url,
-    open: min === 2,
-    sound: min === 2,
+    open: soon,
+    sound: soon,
   }, settings);
 }
 
@@ -631,7 +688,8 @@ async function handle(msg) {
         tabId = (s.watches.find((x) => x.id === msg.id) || {}).tabId;
         s.watches = s.watches.filter((x) => x.id !== msg.id);
       });
-      for (const p of ['w:', 'd10:', 'd2:']) chrome.alarms.clear(p + msg.id);
+      cancelCheck(msg.id);
+      for (const p of ['d10:', 'd5:', 'd2:', 'r:']) chrome.alarms.clear(p + msg.id);
       if (tabId) chrome.tabs.remove(tabId).catch(() => {});
       await updateBadge((await load()).watches);
       return { ok: true };
@@ -649,16 +707,18 @@ async function handle(msg) {
       await mutate((s) => {
         w = s.watches.find((x) => x.id === msg.id);
         if (!w) return;
-        for (const k of ['paused', 'mode', 'dropTime', 'label', 'autoCart']) if (k in msg.patch) w[k] = msg.patch[k];
+        for (const k of ['paused', 'mode', 'dropTime', 'label', 'autoCart', 'raffle']) if (k in msg.patch) w[k] = msg.patch[k];
         if ('mode' in msg.patch) { w.fetchMisses = 0; w.failures = 0; }
+        // Raffle / EQL drops are alert-only: no auto-cart, no fast checking.
+        if (w.raffle) w.autoCart = false;
         // Turning Auto-cart back on by hand re-arms a watch that already bought once.
-        if (msg.patch.autoCart) { delete w.boughtAt; delete w.boughtTotal; }
+        if (w.autoCart && msg.patch.autoCart) { delete w.boughtAt; delete w.boughtTotal; }
       });
       if (w) {
         scheduleDrop(w);
-        if ('paused' in msg.patch || 'mode' in msg.patch) {
-          chrome.alarms.clear('w:' + w.id);
-          if (!w.paused) chrome.alarms.create('w:' + w.id, { when: Date.now() + rand(3000, 8000) });
+        if ('paused' in msg.patch || 'mode' in msg.patch || 'raffle' in msg.patch) {
+          cancelCheck(w.id);
+          if (!w.paused) scheduleCheck(w.id, Date.now() + rand(3000, 8000));
         }
       }
       return { ok: true };

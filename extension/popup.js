@@ -14,6 +14,14 @@ function until(t) {
   const h = Math.floor(s / 3600);
   return h < 48 ? `${h}h ${Math.floor((s % 3600) / 60)}m` : `${Math.floor(h / 24)}d ${h % 24}h`;
 }
+// Same windows as background.js: warm from 2 min before, strike from 15s before to 60s after.
+function dropPhase(w) {
+  if (!w.dropTime || w.raffle || w.kind === 'search' || w.stock === 'in') return 'normal';
+  const t = Date.now() - w.dropTime;
+  if (t >= -15000 && t <= 60000) return 'strike';
+  if (t >= -120000 && t < -15000) return 'warm';
+  return 'normal';
+}
 function flash(el, text) { el.textContent = text; setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 5000); }
 
 function chip(w) {
@@ -44,7 +52,8 @@ function render() {
         <button class="small" data-act="check">Check now</button>
         <button class="small" data-act="pause">${w.paused ? 'Resume' : 'Pause'}</button>
         <button class="small" data-act="mode" title="Fetch = light background request. Tab = reloads a pinned tab (for sites that need it).">Mode: ${w.mode === 'tab' ? 'tab' : 'fetch'}</button>
-        ${w.kind === 'search' ? '' : `<button class="small${w.autoCart ? ' on' : ''}" data-act="cart" title="${state.settings.autoBuy ? 'When it goes live: add to cart, go through checkout and (Full Auto-Buy is ON) click Place Order if the price, item and quantity checks pass.' : 'When it goes live: open the page, add to cart and go through checkout, stopping at the final Place Order button for you to click.'}">Auto-cart: ${w.autoCart ? 'ON' : 'off'}</button>`}
+        ${w.kind === 'search' ? '' : `<button class="small${w.raffle ? ' on' : ''}" data-act="raffle" title="Turn ON for Topps EQL / raffle drops. Alert only: no auto-cart and no fast checking at drop time, since speed doesn't help in a raffle and bot-like activity can get your entry thrown out.">Raffle: ${w.raffle ? 'ON' : 'off'}</button>`}
+        ${w.kind === 'search' || w.raffle ? '' : `<button class="small${w.autoCart ? ' on' : ''}" data-act="cart" title="${state.settings.autoBuy ? 'When it goes live: add to cart, go through checkout and (Full Auto-Buy is ON) click Place Order if the price, item and quantity checks pass.' : 'When it goes live: open the page, add to cart and go through checkout, stopping at the final Place Order button for you to click.'}">Auto-cart: ${w.autoCart ? 'ON' : 'off'}</button>`}
         ${w.kind === 'search' ? '' : '<button class="small" data-act="login" title="Opens the store account page in the background to check you are signed in. Runs automatically 10 min before a drop time.">Check sign-in</button>'}
         <button class="small" data-act="remove">Remove</button>
       </div>`;
@@ -76,10 +85,18 @@ function renderTimes() {
       d.textContent = `Auto-bought ${ago(w.boughtAt)} for $${w.boughtTotal}. Turn Auto-cart on to re-arm.`;
       el.append(d);
     }
-    if (w.dropTime && w.dropTime > Date.now()) {
+    const phase = dropPhase(w);
+    if (w.dropTime && (w.dropTime > Date.now() || phase !== 'normal')) {
       const d = document.createElement('div');
       d.className = 'drop';
-      d.textContent = `Drops in ${until(w.dropTime)} (${new Date(w.dropTime).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })})`;
+      const when = w.dropTime > Date.now()
+        ? `Drops in ${until(w.dropTime)} (${new Date(w.dropTime).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })})`
+        : 'Drop time passed';
+      const speed = w.raffle ? ' · Raffle: alert only'
+        : phase === 'strike' ? ' · STRIKE: checking every 3-5s'
+        : phase === 'warm' ? ' · WARM: checking every 10-15s'
+        : '';
+      d.textContent = when + speed;
       el.append(d);
     }
   }
@@ -93,6 +110,7 @@ async function act(w, action, btn) {
     const r = await send({ type: 'sessionCheck', id: w.id });
     btn.textContent = r && r.state === 'in' ? 'Signed in ✓' : r && r.state === 'out' ? 'Signed OUT' : 'Not sure - see tab';
   }
+  if (action === 'raffle') await send({ type: 'updateWatch', id: w.id, patch: { raffle: !w.raffle } });
   if (action === 'cart') await send({ type: 'updateWatch', id: w.id, patch: { autoCart: !w.autoCart } });
   if (action === 'mode') await send({ type: 'updateWatch', id: w.id, patch: { mode: w.mode === 'tab' ? 'auto' : 'tab' } });
   if (action === 'remove' && confirm(`Stop watching "${w.label}"?`)) await send({ type: 'removeWatch', id: w.id });
